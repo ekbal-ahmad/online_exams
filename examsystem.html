@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Pro Online Exam</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: linear-gradient(to right, #667eea, #764ba2);
+    margin: 0;
+}
+
+.container {
+    width: 90%;
+    max-width: 700px;
+    margin: auto;
+    margin-top: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.option {
+    display: block;
+    text-align: left;
+    padding: 10px;
+    margin: 8px 0;
+    background: #f0f0f0;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.option:hover { background: #ddd; }
+
+.correct { background: lightgreen; }
+.wrong { background: #ffb3b3; }
+
+button {
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+#navPanel button {
+    margin: 3px;
+    padding: 5px;
+}
+
+#progressBar {
+    height: 8px;
+    background: green;
+    width: 0%;
+    margin-bottom: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container" id="app">
+
+<!-- LOGIN -->
+<div id="login">
+    <h2>Enter Your Name</h2>
+    <input type="text" id="username" placeholder="Your Name">
+    <br><br>
+    <button onclick="startExam()">Start Exam</button>
+</div>
+
+</div>
+
+<script>
+let questions = [
+{q:"H2O is?",o:["Oxygen","Water","Hydrogen","CO2"],a:"Water"},
+{q:"Sun is?",o:["Star","Planet","Moon","Gas"],a:"Star"},
+{q:"Earth revolves around?",o:["Moon","Sun","Mars","Venus"],a:"Sun"},
+{q:"Bones in human?",o:["206","300","150","100"],a:"206"},
+{q:"Breathing gas?",o:["CO2","O2","N2","H2"],a:"O2"},
+{q:"CO2 full form?",o:["Carbon dioxide","Carbon mono","Oxygen","Water"],a:"Carbon dioxide"},
+{q:"Light speed?",o:["3x10^8","1x10^5","5x10^7","None"],a:"3x10^8"},
+{q:"Largest planet?",o:["Earth","Mars","Jupiter","Venus"],a:"Jupiter"},
+{q:"Smallest unit?",o:["Atom","Cell","Organ","Molecule"],a:"Cell"},
+{q:"Energy in food?",o:["Heat","Light","Chemical","Kinetic"],a:"Chemical"},
+{q:"Force unit?",o:["Newton","Joule","Watt","Volt"],a:"Newton"},
+{q:"Photosynthesis?",o:["Food making","Breathing","Eating","None"],a:"Food making"},
+{q:"pH neutral?",o:["7","1","14","0"],a:"7"},
+{q:"See stars?",o:["Microscope","Telescope","Barometer","Thermo"],a:"Telescope"},
+{q:"Blood color?",o:["Iron","Hemoglobin","O2","CO2"],a:"Hemoglobin"},
+{q:"Boiling water?",o:["100°C","50°C","0°C","150°C"],a:"100°C"},
+{q:"Current unit?",o:["Volt","Ampere","Ohm","Watt"],a:"Ampere"},
+{q:"Balloon gas?",o:["O2","He","N2","CO2"],a:"He"},
+{q:"Heart chambers?",o:["2","3","4","5"],a:"4"},
+{q:"Plant food?",o:["Photo","Resp","Digest","Trans"],a:"Photo"}
+];
+
+let current=0,score=0,time=20,totalTime=200,timer,totalTimer;
+let userAnswers=[];
+let name="";
+
+// RANDOM
+questions.sort(()=>Math.random()-0.5);
+
+function startExam(){
+    name=document.getElementById("username").value;
+    if(name===""){ alert("Enter name"); return; }
+
+    document.getElementById("app").innerHTML=`
+    <h3>${name}</h3>
+    <div>Total Time: <span id="totalTimer"></span></div>
+    <div>Question Time: <span id="qTimer"></span></div>
+    <div id="progressBar"></div>
+    <div id="navPanel"></div>
+    <h3 id="question"></h3>
+    <div id="options"></div>
+    <button onclick="nextQ()">Next</button>
+    <button onclick="submitExam()">Submit</button>
+    `;
+
+    loadNav();
+    loadQ();
+    startTimers();
+}
+
+// NAV PANEL
+function loadNav(){
+    let nav="";
+    for(let i=0;i<questions.length;i++){
+        nav+=`<button onclick="gotoQ(${i})">${i+1}</button>`;
+    }
+    document.getElementById("navPanel").innerHTML=nav;
+}
+
+// LOAD QUESTION
+function loadQ(){
+    document.getElementById("question").innerText=questions[current].q;
+
+    let optHTML="";
+    questions[current].o.forEach((op,i)=>{
+        let id="o"+i;
+        optHTML+=`
+        <label class="option">
+        <input type="radio" name="opt" value="${op}"> ${op}
+        </label>`;
+    });
+
+    document.getElementById("options").innerHTML=optHTML;
+
+    document.querySelectorAll('input[name="opt"]').forEach(inp=>{
+        inp.onchange=()=> userAnswers[current]=inp.value;
+    });
+
+    document.getElementById("progressBar").style.width=(current/questions.length*100)+"%";
+}
+
+// NAVIGATION
+function gotoQ(i){
+    current=i;
+    loadQ();
+}
+
+function nextQ(){
+    current++;
+    if(current<questions.length) loadQ();
+}
+
+// TIMERS
+function startTimers(){
+    timer=setInterval(()=>{
+        time--;
+        document.getElementById("qTimer").innerText=time;
+        if(time<=0){ time=20; nextQ(); }
+    },1000);
+
+    totalTimer=setInterval(()=>{
+        totalTime--;
+        document.getElementById("totalTimer").innerText=totalTime;
+        if(totalTime<=0) submitExam();
+    },1000);
+}
+
+// SUBMIT
+function submitExam(){
+    clearInterval(timer);
+    clearInterval(totalTimer);
+
+    score=0;
+    questions.forEach((q,i)=>{
+        if(userAnswers[i]===q.a) score++;
+    });
+
+    let percent=(score/questions.length)*100;
+    let grade= percent>80?"A":percent>50?"B":"C";
+
+    localStorage.setItem("result",score);
+
+    document.getElementById("app").innerHTML=`
+    <h2>${name}</h2>
+    <h3>Score: ${score}/${questions.length}</h3>
+    <h3>Percentage: ${percent.toFixed(2)}%</h3>
+    <h3>Grade: ${grade}</h3>
+    <button onclick="review()">Review Answers</button>
+    `;
+}
+
+// REVIEW
+function review(){
+    let html="<h2>Review</h2>";
+    questions.forEach((q,i)=>{
+        html+=`<h4>${q.q}</h4>`;
+        q.o.forEach(op=>{
+            let cls="";
+            if(op===q.a) cls="correct";
+            else if(op===userAnswers[i]) cls="wrong";
+            html+=`<div class="option ${cls}">${op}</div>`;
+        });
+    });
+    document.getElementById("app").innerHTML=html;
+}
+
+// ANTI-CHEAT
+document.addEventListener("visibilitychange",()=>{
+    if(document.hidden){
+        alert("Tab change detected!");
+    }
+});
+</script>
+
+</body>
+</html>
