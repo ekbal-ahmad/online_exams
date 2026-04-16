@@ -63,7 +63,6 @@ button {
 
 <div class="container" id="app">
 
-<!-- LOGIN -->
 <div id="login">
     <h2>Enter Your Name</h2>
     <input type="text" id="username" placeholder="Your Name">
@@ -72,7 +71,8 @@ button {
 </div>
 
 </div>
-    <script>
+
+<script>
 let questions = [
 {q:"H2O क्या है?",o:["ऑक्सीजन","पानी","हाइड्रोजन","कार्बन डाइऑक्साइड"],a:"पानी"},
 {q:"न्यूट्रल घोल का pH मान क्या होता है?",o:["7","1","14","0"],a:"7"},
@@ -96,12 +96,10 @@ let questions = [
 {q:"पृथ्वी किसके चारों ओर घूमती है?",o:["चंद्रमा","मंगल","सूर्य","शुक्र"],a:"सूर्य"}
 ];
 
-
 let current=0,score=0,time=20,totalTime=200,timer,totalTimer;
 let userAnswers=[];
 let name="";
 
-// RANDOM
 questions.sort(()=>Math.random()-0.5);
 
 function startExam(){
@@ -117,7 +115,7 @@ function startExam(){
     <h3 id="question"></h3>
     <div id="options"></div>
     <button onclick="nextQ()">Next</button>
-    <button onclick="submitExam()">Submit</button>
+    <button onclick="submitExam(false)" id="submitBtn" disabled>Submit</button>
     `;
 
     loadNav();
@@ -125,7 +123,6 @@ function startExam(){
     startTimers();
 }
 
-// NAV PANEL
 function loadNav(){
     let nav="";
     for(let i=0;i<questions.length;i++){
@@ -134,40 +131,49 @@ function loadNav(){
     document.getElementById("navPanel").innerHTML=nav;
 }
 
-// LOAD QUESTION
 function loadQ(){
     document.getElementById("question").innerText=questions[current].q;
 
     let optHTML="";
     questions[current].o.forEach((op,i)=>{
-        let id="o"+i;
+        let checked = userAnswers[current]===op ? "checked":"";
         optHTML+=`
         <label class="option">
-        <input type="radio" name="opt" value="${op}"> ${op}
+        <input type="radio" name="opt" value="${op}" ${checked}> ${op}
         </label>`;
     });
 
     document.getElementById("options").innerHTML=optHTML;
 
     document.querySelectorAll('input[name="opt"]').forEach(inp=>{
-        inp.onchange=()=> userAnswers[current]=inp.value;
+        inp.onchange=()=>{
+            userAnswers[current]=inp.value;
+            checkAllAnswered();
+        };
     });
 
-    document.getElementById("progressBar").style.width=(current/questions.length*100)+"%";
+    document.getElementById("progressBar").style.width=((current+1)/questions.length*100)+"%";
 }
 
-// NAVIGATION
 function gotoQ(i){
     current=i;
     loadQ();
 }
 
 function nextQ(){
-    current++;
-    if(current<questions.length) loadQ();
+    if(current<questions.length-1){
+        current++;
+        loadQ();
+    }
 }
 
-// TIMERS
+function checkAllAnswered(){
+    let allAnswered = userAnswers.length === questions.length 
+        && userAnswers.every(ans => ans !== undefined);
+
+    document.getElementById("submitBtn").disabled = !allAnswered;
+}
+
 function startTimers(){
     timer=setInterval(()=>{
         time--;
@@ -178,12 +184,22 @@ function startTimers(){
     totalTimer=setInterval(()=>{
         totalTime--;
         document.getElementById("totalTimer").innerText=totalTime;
-        if(totalTime<=0) submitExam();
+        if(totalTime<=0) submitExam(true);
     },1000);
 }
 
-// SUBMIT
-function submitExam(){
+function submitExam(auto=false){
+
+    if(!auto){
+        let allAnswered = userAnswers.length === questions.length 
+            && userAnswers.every(ans => ans !== undefined);
+
+        if(!allAnswered){
+            alert("सभी प्रश्नों का उत्तर दें!");
+            return;
+        }
+    }
+
     clearInterval(timer);
     clearInterval(totalTimer);
 
@@ -195,8 +211,6 @@ function submitExam(){
     let percent=(score/questions.length)*100;
     let grade= percent>80?"A":percent>50?"B":"C";
 
-    localStorage.setItem("result",score);
-
     document.getElementById("app").innerHTML=`
     <h2>${name}</h2>
     <h3>Score: ${score}/${questions.length}</h3>
@@ -206,22 +220,28 @@ function submitExam(){
     `;
 }
 
-// REVIEW
+// 🔥 REVIEW ONLY ATTEMPTED
 function review(){
-    let html="<h2>Review</h2>";
+    let html="<h2>Review (Attempted Only)</h2>";
+
     questions.forEach((q,i)=>{
+
+        if(userAnswers[i] === undefined) return;
+
         html+=`<h4>${q.q}</h4>`;
+
         q.o.forEach(op=>{
             let cls="";
             if(op===q.a) cls="correct";
             else if(op===userAnswers[i]) cls="wrong";
+
             html+=`<div class="option ${cls}">${op}</div>`;
         });
     });
+
     document.getElementById("app").innerHTML=html;
 }
 
-// ANTI-CHEAT
 document.addEventListener("visibilitychange",()=>{
     if(document.hidden){
         alert("Tab change detected!");
